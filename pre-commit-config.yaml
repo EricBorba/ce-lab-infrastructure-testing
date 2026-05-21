@@ -1,0 +1,17 @@
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-tf
+    rev: v1.96.1
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+        args:
+          - --hook-config=--retry-once-with-cleanup=true
+
+  - repo: local
+    hooks:
+      - id: convention-check
+        name: Convention Validation
+        entry: ./scripts/validate-conventions.sh
+        language: script
+        files: '\.tf$'
+        pass_filenames: false
