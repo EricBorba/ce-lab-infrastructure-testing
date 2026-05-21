@@ -4,7 +4,7 @@
 
 This lab implements a multi-layer automated testing strategy for Terraform infrastructure code.
 The setup catches issues at every stage — from the local editor to the CI pipeline — covering
-an S3 bucket with versioning and KMS encryption, and a DynamoDB table for state locking.
+an S3 bucket with versioning and KMS encryption, and a DynamoDB table for state locking..
 
 ---
 
@@ -77,7 +77,23 @@ static-analysis ──┬──> convention-checks
 
 Merge is blocked if any job fails.
 
-### Layer 5: Pre-Commit Hooks (`scripts/install-hooks.sh`)
+### Layer 5: Security Scanning (`.github/workflows/security-scan.yml`)
+
+Runs [Checkov](https://www.checkov.io/) on every PR to detect security misconfigurations in the Terraform code:
+
+- Scans for missing S3 public access blocks, unencrypted resources, overly permissive IAM policies, and more
+- Skips `CKV_AWS_18` (S3 access logging) and `CKV_AWS_21` (S3 versioning) which are intentionally out of scope for this lab
+- Uploads results as a SARIF artifact for review
+
+> **Note:** The security scan failed on the test PR — this is the expected and correct outcome. Checkov identified real security gaps in the configuration (e.g. missing S3 public access block). The test worked as intended: it caught actual issues that should be remediated before merging.
+
+### Layer 6: PR Test Report (`.github/workflows/test-report.yml`)
+
+Posts an automated summary comment on every PR with a pass/fail table for each test layer, making the CI status immediately visible without having to open each job log.
+
+![GitHub PR showing test report bot comment (3/3 pass) and Checkov failing on detected security breaches](screenshots/github-pr-checkov-breach-detected-test-report.png)
+
+### Layer 7: Pre-Commit Hooks (`scripts/install-hooks.sh`)
 
 Installs a `.git/hooks/pre-commit` that runs all local checks before each commit:
 
@@ -105,7 +121,9 @@ m5-05-infra-testing/
 │   └── install-hooks.sh             # Git hook installer
 └── .github/
     └── workflows/
-        └── ci.yml                   # GitHub Actions CI pipeline
+        ├── ci.yml                   # Core CI pipeline (fmt, validate, tflint, conventions, plan)
+        ├── security-scan.yml        # Checkov security scanning (Extra Mile)
+        └── test-report.yml          # PR test summary comment bot (Extra Mile)
 ```
 
 ---
@@ -140,3 +158,5 @@ terraform validate
 - **Plan parsing** validates actual changes before they reach real infrastructure
 - **Pre-commit hooks** shift testing left, giving developers immediate feedback before code is even pushed
 - **CI enforcement** ensures no untested code reaches the main branch
+- **Security scanning failures are successes** — Checkov failing means it found real issues; a passing scan on deliberately insecure config would be the actual failure
+- **PR test report bots** reduce friction by surfacing pass/fail status directly in the PR without requiring reviewers to dig into job logs
