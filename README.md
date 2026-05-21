@@ -4,7 +4,7 @@
 
 This lab implements a multi-layer automated testing strategy for Terraform infrastructure code.
 The setup catches issues at every stage — from the local editor to the CI pipeline — covering
-an S3 bucket with versioning and KMS encryption, and a DynamoDB table for state locking.
+an S3 bucket with versioning and KMS encryption, and a DynamoDB table for state locking..
 
 ---
 
